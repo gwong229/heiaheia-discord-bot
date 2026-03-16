@@ -5,6 +5,13 @@ const fetch = require("node-fetch");
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK;
 const POLL_INTERVAL = 60 * 1000;
 const SEEN_FILE = "seen_posts.json";
+// Get the session from the secret
+const encodedSession = process.env.HEIA_SESSION; // your secret name
+if (!encodedSession) throw new Error("HEIA_SESSION secret not set!");
+
+// Decode and write to a temporary file
+const sessionJson = Buffer.from(encodedSession, "base64").toString("utf8");
+fs.writeFileSync("tmp_session.json", sessionJson);
 
 // Load previously seen posts
 let seenPosts = new Set();
@@ -16,7 +23,7 @@ if (fs.existsSync(SEEN_FILE)) {
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
-    storageState: "heia_session.json",
+    storageState: "tmp_session.json",
   });
   const page = await context.newPage();
 

@@ -20,12 +20,8 @@ if (fs.existsSync(SEEN_FILE)) {
   seenPosts = new Set(JSON.parse(data));
 }
 
-let firstRun = false;
-if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
-  firstRun = true;
-  // Save current posts (empty at start) so next runs know what was already seen
-  fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
-}
+// Determine if this is the first run (no previous seen posts)
+let firstRun = seenPosts.size === 0;
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -37,7 +33,6 @@ if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
   console.log("Bot started. Navigating to feed...");
   await page.goto("https://app.heiaheia.com");
   await page.waitForSelector("div.r_-feed-entry.js-feed-entry");
-
   console.log("Feed loaded.");
 
   async function scrapeFeed() {
@@ -45,6 +40,7 @@ if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.waitForSelector("div.r_-feed-entry.js-feed-entry");
 
+      // Scrape posts
       const posts = await page.$$eval(
         "div.r_-feed-entry.js-feed-entry",
         (entries) =>
@@ -67,6 +63,16 @@ if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
 
       let newPosts = false;
 
+      // Initialize seen posts on first run
+      if (firstRun) {
+        posts.forEach((post) => seenPosts.add(post.id));
+        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
+        console.log(
+          `First run: initialized seen posts with ${seenPosts.size} items.`,
+        );
+        firstRun = false; // clear first run
+      }
+
       for (const post of posts) {
         if (!seenPosts.has(post.id)) {
           seenPosts.add(post.id);
@@ -75,7 +81,6 @@ if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
           // Only post to Discord if this is NOT the first run
           if (!firstRun) {
             console.log("New post:", post.title, "-", post.meta);
-
             await fetch(WEBHOOK_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -86,8 +91,9 @@ if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
       }
 
       // Always save updated seen posts
-      fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
-      firstRun = false; // clear first run after initial scrape
+      if (newPosts) {
+        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
+      }
     } catch (err) {
       console.error("Error scraping feed:", err);
     }

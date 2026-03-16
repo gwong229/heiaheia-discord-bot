@@ -1,3 +1,4 @@
+# .github/workflows/bot.yml
 name: HeiaHeia Bot
 
 on:
@@ -20,6 +21,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install
+
+      - name: Decode HeiaHeia session
+        run: echo "${{ secrets.HEIA_SESSION }}" | base64 --decode > heia_session.json
 
       - name: Run bot
         env:

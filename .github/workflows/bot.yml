@@ -29,6 +29,7 @@ jobs:
         with:
           name: seen-posts
           path: .
+          fail-on-error: false   # <-- this prevents failing the workflow if it doesn't exist
 
       - name: Run bot
         env:

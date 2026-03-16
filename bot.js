@@ -51,17 +51,28 @@ if (fs.existsSync(SEEN_FILE)) {
             .filter(Boolean),
       );
 
+      let newPosts = false;
+
       for (const post of posts) {
         if (!seenPosts.has(post.id)) {
           seenPosts.add(post.id);
+          newPosts = true;
+
           console.log("New post:", post.title, "-", post.meta);
 
           await fetch(WEBHOOK_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: `${post.title} - ${post.meta}` }),
+            body: JSON.stringify({
+              content: `${post.title} - ${post.meta}`,
+            }),
           });
         }
+      }
+
+      // Save once if there were any new posts
+      if (newPosts) {
+        fs.writeFileSync("seen_posts.json", JSON.stringify([...seenPosts]));
       }
 
       // Save updated seen posts

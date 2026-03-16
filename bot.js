@@ -18,6 +18,8 @@ let seenPosts = new Set();
 if (fs.existsSync(SEEN_FILE)) {
   const data = fs.readFileSync(SEEN_FILE, "utf-8");
   seenPosts = new Set(JSON.parse(data));
+} else {
+  firstRun = true; // No previous seen_posts, this is the first run
 }
 
 (async () => {
@@ -65,15 +67,16 @@ if (fs.existsSync(SEEN_FILE)) {
           seenPosts.add(post.id);
           newPosts = true;
 
-          console.log("New post:", post.title, "-", post.meta);
+          // Only post to Discord if this is NOT the first run
+          if (!firstRun) {
+            console.log("New post:", post.title, "-", post.meta);
 
-          await fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              content: `${post.title} - ${post.meta}`,
-            }),
-          });
+            await fetch(WEBHOOK_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content: `${post.title} - ${post.meta}` }),
+            });
+          }
         }
       }
 

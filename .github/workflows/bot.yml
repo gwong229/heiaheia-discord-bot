@@ -1,10 +1,9 @@
-# .github/workflows/bot.yml
 name: HeiaHeia Bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # runs every 5 minutes
-  workflow_dispatch:       # allows manual run
+    - cron: '*/5 * * * *'  # every 5 minutes
+  workflow_dispatch:       # allow manual run
 
 jobs:
   run-bot:
@@ -13,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false  # optional, safer
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -25,10 +26,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install
 
-      - name: Decode HeiaHeia session
-        run: echo "${{ secrets.HEIA_SESSION }}" | base64 --decode > heia_session.json
-
       - name: Run bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: node bot.js
+          HEIA_SESSION: ${{ secrets.HEIA_SESSION }} # optional if you base64 encode
+        run: |
+          echo "$HEIA_SESSION" | base64 --decode > heia_session.json
+          node bot.js

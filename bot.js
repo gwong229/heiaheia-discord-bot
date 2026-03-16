@@ -102,5 +102,6 @@ const seenPosts = new Set();
   console.log("Initialized with", seenPosts.size, "existing posts.");
 
   // start polling after initialization
-  setInterval(scrapeFeed, POLL_INTERVAL);
+  await scrapeFeed();
+  await browser.close();
 })();

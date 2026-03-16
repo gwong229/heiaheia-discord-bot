@@ -27,7 +27,7 @@ jobs:
       - name: Run bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          HEIA_SESSION_JSON: ${{ secrets.HEIA_SESSION_JSON }}
+          HEIA_SESSION: ${{ secrets.HEIA_SESSION_JSON }}
         run: node bot.js
 
       - name: Configure git for pushing

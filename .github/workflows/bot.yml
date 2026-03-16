@@ -25,7 +25,7 @@ jobs:
         run: npx playwright install
 
       - name: Download previous seen posts (if any)
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: seen-posts
           path: .
@@ -37,7 +37,7 @@ jobs:
         run: node bot.js
 
       - name: Upload updated seen posts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: seen-posts
           path: seen_posts.json

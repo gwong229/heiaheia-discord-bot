@@ -21,8 +21,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Restore HeiaHeia session
-        run: echo '${{ secrets.HEIA_SESSION }}' > heia_session.json
+      - name: Install Playwright browsers
+        run: npx playwright install
 
       - name: Run bot
         env:

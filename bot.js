@@ -3,10 +3,10 @@ const { chromium } = require("playwright");
 const fetch = require("node-fetch");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK;
-const POLL_INTERVAL = 60 * 1000;
 const SEEN_FILE = "seen_posts.json";
+
 // Get the session from the secret
-const encodedSession = process.env.HEIA_SESSION; // your secret name
+const encodedSession = process.env.HEIA_SESSION;
 if (!encodedSession) throw new Error("HEIA_SESSION secret not set!");
 
 // Decode and write to a temporary file
@@ -77,18 +77,15 @@ if (fs.existsSync(SEEN_FILE)) {
         }
       }
 
-      // Save once if there were any new posts
-      if (newPosts) {
-        fs.writeFileSync("seen_posts.json", JSON.stringify([...seenPosts]));
-      }
-
       // Save updated seen posts
-      fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
+      if (newPosts) {
+        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]));
+      }
     } catch (err) {
       console.error("Error scraping feed:", err);
     }
   }
 
-  await scrapeFeed(); // run once on startup
+  await scrapeFeed(); // run once
   await browser.close();
 })();

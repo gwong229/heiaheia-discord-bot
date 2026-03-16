@@ -18,8 +18,13 @@ let seenPosts = new Set();
 if (fs.existsSync(SEEN_FILE)) {
   const data = fs.readFileSync(SEEN_FILE, "utf-8");
   seenPosts = new Set(JSON.parse(data));
-} else {
-  firstRun = true; // No previous seen_posts, this is the first run
+}
+
+let firstRun = false;
+if (!fs.existsSync(SEEN_FILE) || seenPosts.size === 0) {
+  firstRun = true;
+  // Save current posts (empty at start) so next runs know what was already seen
+  fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
 }
 
 (async () => {
@@ -80,10 +85,9 @@ if (fs.existsSync(SEEN_FILE)) {
         }
       }
 
-      // Save updated seen posts
-      if (newPosts) {
-        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]));
-      }
+      // Always save updated seen posts
+      fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
+      firstRun = false; // clear first run after initial scrape
     } catch (err) {
       console.error("Error scraping feed:", err);
     }

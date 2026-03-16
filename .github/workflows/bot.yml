@@ -20,13 +20,14 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        
+
       - name: Install Playwright browsers
         run: npx playwright install
 
       - name: Run bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          HEIA_SESSION_JSON: ${{ secrets.HEIA_SESSION_JSON }}
         run: node bot.js
 
       - name: Configure git for pushing

@@ -20,9 +20,6 @@ if (fs.existsSync(SEEN_FILE)) {
   seenPosts = new Set(JSON.parse(data));
 }
 
-// Determine if this is the first run (no previous seen posts)
-let firstRun = seenPosts.size === 0;
-
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
@@ -40,7 +37,6 @@ let firstRun = seenPosts.size === 0;
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.waitForSelector("div.r_-feed-entry.js-feed-entry");
 
-      // Scrape posts
       const posts = await page.$$eval(
         "div.r_-feed-entry.js-feed-entry",
         (entries) =>
@@ -63,23 +59,13 @@ let firstRun = seenPosts.size === 0;
 
       let newPosts = false;
 
-      // Initialize seen posts on first run
-      if (firstRun) {
-        posts.forEach((post) => seenPosts.add(post.id));
-        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
-        console.log(
-          `First run: initialized seen posts with ${seenPosts.size} items.`,
-        );
-        firstRun = false; // clear first run
-      }
-
       for (const post of posts) {
         if (!seenPosts.has(post.id)) {
           seenPosts.add(post.id);
           newPosts = true;
 
           // Only post to Discord if this is NOT the first run
-          if (!firstRun) {
+          if (fs.existsSync(SEEN_FILE)) {
             console.log("New post:", post.title, "-", post.meta);
             await fetch(WEBHOOK_URL, {
               method: "POST",
@@ -91,9 +77,7 @@ let firstRun = seenPosts.size === 0;
       }
 
       // Always save updated seen posts
-      if (newPosts) {
-        fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
-      }
+      fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
     } catch (err) {
       console.error("Error scraping feed:", err);
     }

@@ -24,21 +24,16 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install
 
-      - name: Download previous seen posts (if any)
-        uses: actions/download-artifact@v4
-        with:
-          name: seen-posts
-          path: .
-        continue-on-error: true   # <-- allows workflow to keep running if the artifact doesn't exist
-
       - name: Run bot
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          HEIA_SESSION: ${{ secrets.HEIA_SESSION}}
+          HEIA_SESSION: ${{ secrets.HEIA_SESSION }}
         run: node bot.js
 
-      - name: Upload updated seen posts
-        uses: actions/upload-artifact@v4
-        with:
-          name: seen-posts
-          path: seen_posts.json
+      - name: Commit updated seen posts
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add seen_posts.json
+          git diff --cached --quiet || git commit -m "Update seen posts from workflow"
+          git push origin main

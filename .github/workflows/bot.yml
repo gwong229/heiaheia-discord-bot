@@ -3,7 +3,7 @@ name: HeiaHeia Bot
 on:
   schedule:
     - cron: '*/5 * * * *'  # runs every 5 minutes
-  workflow_dispatch:       # allows manual run
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -28,12 +28,19 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           HEIA_SESSION: ${{ secrets.HEIA_SESSION }}
-        run: node bot.js
+        run: timeout 4m node bot.js || echo "Bot failed or timed out"
 
-      - name: Commit updated seen posts
+      - name: Commit updated seen posts (with heartbeat)
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+
           git add seen_posts.json
-          git diff --cached --quiet || git commit -m "Update seen posts from workflow"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+
+          # If there are changes → normal commit
+          # If no changes → heartbeat commit
+          git diff --cached --quiet \
+            && git commit --allow-empty -m "heartbeat" \
+            || git commit -m "Update seen posts from workflow"
+
+          git push

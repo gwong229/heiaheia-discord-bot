@@ -6,23 +6,21 @@ const fs = require("fs");
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  await page.goto("https://heiaheia.com");
+  await page.goto("https://app.heiaheia.com");
 
-  console.log("Log in manually, then wait about 10 seconds...");
+  console.log("Log in fully, then press ENTER...");
 
-  // give you time to log in and load feed
-  await page.waitForTimeout(30000);
+  process.stdin.once("data", async () => {
+    await page.goto("https://app.heiaheia.com", {
+      waitUntil: "networkidle",
+    });
 
-  // dump page HTML
-  const html = await page.content();
-  fs.writeFileSync("debug_page.html", html);
+    const html = await page.content();
+    fs.writeFileSync("debug_page.html", html);
 
-  console.log("Saved DOM to debug_page.html");
+    await context.storageState({ path: "heia_session.json" });
 
-  // save session no matter what
-  await context.storageState({ path: "heia_session.json" });
-
-  console.log("Session saved to heia_session.json");
-
-  await browser.close();
+    console.log("Session saved!");
+    await browser.close();
+  });
 })();

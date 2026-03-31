@@ -4,6 +4,26 @@ const fetch = require("node-fetch");
 
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK;
 const SEEN_FILE = "seen_posts.json";
+let lastErrorTime = 0;
+
+async function notify(message) {
+  const now = Date.now();
+
+  // only send once every 30 minutes
+  if (now - lastErrorTime < 30 * 60 * 1000) return;
+
+  lastErrorTime = now;
+
+  try {
+    await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: message }),
+    });
+  } catch (e) {
+    console.log("Fix your bot dump ass:", e.message);
+  }
+}
 
 // Get the session from the secret
 const encodedSession = process.env.HEIA_SESSION;
@@ -29,13 +49,51 @@ if (fs.existsSync(SEEN_FILE)) {
 
   console.log("Bot started. Navigating to feed...");
   await page.goto("https://app.heiaheia.com");
-  await page.waitForSelector("div.r_-feed-entry.js-feed-entry");
+
+  if (page.url().includes("login")) {
+    console.log("Session expired");
+
+    await notify("⚠️ HeiaHeia bot: session expired (logged out)");
+
+    await browser.close();
+    return;
+  }
+
+  console.log("Current URL:", page.url());
+  const found = await page
+    .waitForSelector("div.r_-feed-entry.js-feed-entry", { timeout: 30000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!found) {
+    await notify(
+      "⚠️ HeiaHeia bot: feed not found (possible login issue or site change)",
+    );
+    await browser.close();
+    return;
+  }
   console.log("Feed loaded.");
 
   async function scrapeFeed() {
     try {
       await page.reload({ waitUntil: "domcontentloaded" });
-      await page.waitForSelector("div.r_-feed-entry.js-feed-entry");
+      if (page.url().includes("login")) {
+        await notify("Bot Expired during reload dump ass");
+        return;
+      }
+      const found = await page
+        .waitForSelector("div.r_-feed-entry.js-feed-entry", { timeout: 30000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!found) {
+        if (page.url().includes("login")) {
+          await notify("⚠️ HeiaHeia bot: session expired during scrape");
+        } else {
+          await notify("⚠️ HeiaHeia bot: feed selector missing during scrape");
+        }
+        return;
+      }
 
       const posts = await page.$$eval(
         "div.r_-feed-entry.js-feed-entry",
@@ -43,7 +101,8 @@ if (fs.existsSync(SEEN_FILE)) {
           entries
             .map((entry) => {
               if (entry.querySelector(".r_-icon_14_lock")) return null;
-              const id = entry.dataset.id;
+              const id = entry.dataset.id || entry.getAttribute("data-id");
+              if (!id) return null;
               const titleElem = entry.querySelector(".r_-feed-entry__name");
               const metaElem = entry.querySelector(".r_-feed-entry__meta");
               const title = titleElem
@@ -80,6 +139,7 @@ if (fs.existsSync(SEEN_FILE)) {
       fs.writeFileSync(SEEN_FILE, JSON.stringify([...seenPosts]), "utf-8");
     } catch (err) {
       console.error("Error scraping feed:", err);
+      await notify(`❌ HeiaHeia bot error: ${err.message}`);
     }
   }
 
